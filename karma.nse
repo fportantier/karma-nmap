@@ -7,27 +7,17 @@ local table = require "table"
 description = [[
 Uses the Karma Query API to obtain information about public IP addresses.
 
-There is no limit on requests to this service. However, the API key
-needs to be obtained through free registration for this service:
 <code>https://karma.securetia.com</code>
 ]]
 
 ---
 -- @usage
--- nmap --script karma <target> --script-args karma.apikey=<KEY>
---
--- @args karma.apikey A sting specifying the api-key which
---       the user wants to use to access this service
+-- nmap --script karma <target>
 --
 -- @output
 -- | karma: 
--- |   cc: PE
 -- |   blacklists: uceprotect.level3,uceprotect.level1,uceprotect.level2,spamhaus.css,sorbs.web,bad.psky.me
--- |   asn: 6147
--- |   country: Peru
--- |   asname: Telefonica del Peru S.A.A.,PE
--- |   status: blacklisted
--- |_  rir: LACNIC
+-- |_  status: blacklisted
 --
 
 author = "Fabian Martinez Portantier"
@@ -42,17 +32,6 @@ hostrule = function(host)
     return false
   end
 
-  api_key = stdnse.get_script_args(SCRIPT_NAME..".apikey")
-
-  if not (type(api_key)=="string") then
-    api_key = os.getenv("KARMA_APIKEY")
-  end
-
-  if not (type(api_key)=="string") then
-    stdnse.debug1("not running: No Karma API key specified.")
-    return false
-  end
-
   return true
 end
 
@@ -60,11 +39,10 @@ end
 local karma = function(ip)
 
   local header = {}
-  header["Authorization"] = api_key
   header["Content-Length"] = 0 
   header["Accept"] = "application/json"
 
-  local response = http.get("karma.securetia.com", 443, "/q/ip/"..ip, { header = header })
+  local response = http.get("karma.securetia.com", 443, "/api/ip/"..ip, { header = header })
 
   if not response.status then
     stdnse.debug1("error received, exiting")
@@ -98,10 +76,7 @@ action = function(host)
   local result = {}
 
   for key,value in pairs(out) do
-    if type(value) == 'table' then
-      value = table.concat(value, ",")
-    end
-    table.insert(result, key .. ": " .. tostring(value))
+    table.insert(result, value)
   end
 
   return stdnse.format_output(true, result)
